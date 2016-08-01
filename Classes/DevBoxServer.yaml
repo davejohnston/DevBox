@@ -1,0 +1,43 @@
+Namespaces:
+  =: io.murano.apps.owm
+  std: io.murano
+  res: io.murano.resources
+  sys: io.murano.system
+
+
+Name: DevBoxServer
+
+Extends: std:Application
+
+Properties:
+
+  enableDebug:
+    Contract: $.bool()
+    Default: false
+
+  instance:
+    Contract: $.class(res:Instance).notNull()
+
+Methods:
+  initialize:
+    Body:
+      - $._environment: $.find(std:Environment).require()
+
+  deploy:
+    Body:
+      - If: not $.getAttr(deployed, false)
+        Then:
+          - $._environment.reporter.report($this, 'Creating VM for DevBox Server.')
+          - $.instance.deploy()
+          - $resources: new(sys:Resources)
+          - $template: $resources.yaml('DeployDevBox.template').bind(dict(enableDebug => $.enableDebug))
+          - $._environment.reporter.report($this, 'Instance is created. Deploying DevBox Server')
+          - $.instance.agent.call($template, $resources)
+          - $._environment.reporter.report($this, 'DevBox is ready...')
+          - If: $.instance.assignFloatingIp
+            Then:
+              - $host: $.instance.floatingIpAddress
+            Else:
+              - $host: $.instance.ipAddresses[0]
+          - $._environment.reporter.report($this, format('DevBox is available at ssh username@{0}', $host))
+          - $.setAttr(deployed, true)

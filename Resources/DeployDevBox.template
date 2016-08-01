@@ -1,0 +1,19 @@
+FormatVersion: 2.0.0
+Version: 1.0.0
+Name: Deploy OWM DevBox
+
+Parameters:
+  enableDebug: $enableDebug
+
+Body: |
+  return devBoxDeploy('{0}'.format(args.enableDebug)).stdout
+
+Scripts:
+  devBoxDeploy:
+    Type: Application
+    Version: 1.0.0
+    EntryPoint: setupDevBox.sh
+    Files: []
+    Options:
+      captureStdout: true
+      captureStderr: true

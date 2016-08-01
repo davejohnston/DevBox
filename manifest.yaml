@@ -1,0 +1,11 @@
+Format: 1.0
+Type: Application
+FullName: io.murano.apps.owm.DevBox
+Name: Openwave Development Box
+Description: |
+ A Development server with all the dependancies required to build and
+ install the integrate suite of products.
+Author: 'Openwave Mobility, Inc'
+Tags: [Server]
+Classes:
+ io.murano.apps.owm.DevBoxServer: DevBoxServer.yaml

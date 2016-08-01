@@ -1,0 +1,162 @@
+Version: 2.2
+
+Templates:
+  customJoinNet1:
+    ?:
+      type: io.murano.resources.ExistingNeutronNetwork
+    internalNetworkName: management
+    internalSubnetworkName: management_subnet
+  customJoinNet2:
+    ?:
+      type: io.murano.resources.ExistingNeutronNetwork
+    internalNetworkName: service
+    internalSubnetworkName: service_subnet
+  customJoinNet3:
+    ?:
+      type: io.murano.resources.ExistingNeutronNetwork
+    internalNetworkName: control 
+    internalSubnetworkName: control_subnet
+  customJoinNet4:
+    ?:
+      type: io.murano.resources.ExistingNeutronNetwork
+    internalNetworkName: subscriber 
+    internalSubnetworkName: subscriber_subnet
+  customJoinNet5:
+    ?:
+      type: io.murano.resources.ExistingNeutronNetwork
+    internalNetworkName: internet
+    internalSubnetworkName: internet_subnet
+  bootVolumes:
+    - volume:
+        ?:
+          type: io.murano.resources.CinderVolume
+        size: $.instanceConfiguration.volSize
+        sourceImage: $.instanceConfiguration.osImage
+      bootIndex: 0
+      deviceName: vda
+      deviceType: disk
+
+Application:
+  ?:
+    type: io.murano.apps.owm.DevBoxServer
+  enableDebug: false
+  instance:
+    ?:
+      type: io.murano.resources.LinuxMuranoInstance
+    name: generateHostname(concat($.appConfiguration.unitNamingPattern, '-#'), 1)
+    flavor: $.instanceConfiguration.flavor
+    keyname: $.instanceConfiguration.keyPair
+    availabilityZone: $.instanceConfiguration.availabilityZone
+    assignFloatingIp: $.networkConfiguration.assignFloatingIP
+    securityGroupName: tenant_securitygroup 
+    networks:
+      useEnvironmentNetwork: $.networkConfiguration.network[0]=null and $.networkConfiguration.network2[0]=null and $.networkConfiguration.network3[0]=null and $.networkConfiguration.network4[0]=null and $.networkConfiguration.network5[0]=null
+      useFlatNetwork: false
+      customNetworks: list(switch($.networkConfiguration.network[0], $=null=>null, $!=null=>$customJoinNet1), switch($.networkConfiguration.network2[0], $=null=>null, $!=null=>$customJoinNet2), switch($.networkConfiguration.network3[0], $=null=>null, $!=null=>$customJoinNet3), switch($.networkConfiguration.network4[0], $=null=>null, $!=null=>$customJoinNet4), switch($.networkConfiguration.network5[0], $=null=>null, $!=null=>$customJoinNet5)).where($ != null)
+    blockDevices: $bootVolumes
+
+Forms:
+  - appConfiguration:
+      fields:
+        - name: unitNamingPattern
+          type: string
+          label: Virtual Machine Name
+          required: true
+          maxLength: 8
+          regexpValidator: '^[a-zA-z0-9]*$'
+          errorMessages:
+            invalid: Just letters, numbers, underscores and hyphens are allowed.
+          helpText: Just letters, numbers, underscores and hyphens are allowed.
+          description: >-
+            Name to identify your VM.  Its recommended you use your windows username.
+            i.e. dajohnst.  Just A-Z, a-z, 0-9 are allowed.
+
+  - instanceConfiguration:
+      fields:
+        - name: title
+          type: string
+          required: false
+          hidden: true
+          description: Specify some instance parameters on which the application would be created
+        - name: flavor
+          type: flavor
+          label: Instance flavor
+          description: >-
+            Select registered in Openstack flavor. Consider that application performance
+            depends on this parameter.
+          required: false
+        - name: osImage
+          type: image
+          imageType: linux
+          label: Instance image
+          description: >-
+            Select valid image for the application. Image should already be prepared and
+            registered in glance.
+        - name: volSize
+          type: integer
+          label: Size of volume
+          initial: 30
+          required: true
+          description: >-
+            Specify the size of volume which is going to be created from image
+        - name: keyPair
+          type: keypair
+          label: Key Pair
+          description: >-
+            Select the Key Pair to control access to instances. You can login to
+            instances using this KeyPair after the deployment of application.
+          required: false
+        - name: availabilityZone
+          type: azone
+          label: Availability zone
+          description: Select availability zone where application would be installed.
+          required: false
+  - networkConfiguration:
+      fields:
+        - name: assignFloatingIP
+          type: boolean
+          label: Assign Floating IP
+          description: >-
+             Select to true to assign floating IP automatically
+          initial: false
+          required: false
+        - name: network
+          type: network
+          label: Network
+          description: The management network used to access your VM.
+          filter: 'management*'
+          required: false
+          allow_auto: false
+          murano_networks: translate
+        - name: network2
+          type: network
+          label: Service Network
+          description: The service network should be used for inter-service communication i.e. OAM to FE.
+          filter: 'service*'
+          allow_auto: false
+          required: false
+          murano_networks: translate
+        - name: network3
+          type: network
+          label: Control Network
+          description: The control network should be used for control plane traffic, i.e Radius, Gx/Gy
+          filter: 'control*'
+          allow_auto: false
+          required: false
+          murano_networks: translate
+        - name: network4
+          type: network
+          label: Subscriber Network
+          description: The subscriber network should be used for simulating traffic ingress/egress to handsets
+          filter: 'subscriber*'
+          allow_auto: false
+          required: false
+          murano_networks: translate
+        - name: network5
+          type: network
+          label: Internet Network
+          description: The internet network should be used for simulating traffic ingress/egress to the internet
+          filter: 'internet*'
+          allow_auto: false
+          required: false
+          murano_networks: translate
